@@ -11,7 +11,7 @@ CYAN='\033[0;36m'
 LIGHT='\033[0;37m'
 # ==========================================
 
-repo="https://raw.githubusercontent.com/Andyyuda/P/main"
+repo="https://raw.githubusercontent.com/Adidastore11/P/main"
 
  wget -O /usr/local/bin/ohpserver "${repo}/ws/ohpserver"
 chmod +x /usr/local/bin/ohpserver
