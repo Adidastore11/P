@@ -3,7 +3,7 @@ apt dist-upgrade -y
 apt install netfilter-persistent -y
 apt-get remove --purge ufw firewalld -y
 apt install -y screen curl jq bzip2 gzip vnstat coreutils iftop zip unzip git apt-transport-https build-essential -y
-REPO="https://raw.githubusercontent.com/Andyyuda/P/main/"
+REPO="https://raw.githubusercontent.com/Adidastore11/P/main/"
 # initializing var
 export DEBIAN_FRONTEND=noninteractive
 MYIP=$(wget -qO- ipinfo.io/ip)
@@ -113,7 +113,7 @@ cat > /var/www/html/index.html <<-END
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html>
 <kepala>
-<meta http-equiv="REFRESH" content="0;url=https://wa.me/6282131861788">
+<meta http-equiv="REFRESH" content="0;url=https://wa.me/+62 821-2635-2133">
 </kepala>
 <tubuh>
 <p>Pengalihan URL</p>
@@ -194,7 +194,7 @@ rm -rf /root/vnstat-2.6
 
 cd
 apt install haproxy -y
-wget -O /etc/haproxy/haproxy.cfg "https://raw.githubusercontent.com/Andyyuda/P/ssh/main/haproxy.cfg"
+wget -O /etc/haproxy/haproxy.cfg "https://raw.githubusercontent.com/Adidastore11/P/ssh/main/haproxy.cfg"
 systemctl daemon-reload
 systemctl stop haproxy
 systemctl enable haproxy
