@@ -11,7 +11,7 @@ CYAN='\033[0;36m'
 LIGHT='\033[0;37m'
 # ==========================================
 # Getting
-REPO="https://raw.githubusercontent.com/Andyyuda/P/main/"
+REPO="https://raw.githubusercontent.com/Adidastore11/P/main/"
 echo -e "
 "
 date
