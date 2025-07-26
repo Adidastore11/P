@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==================================================
 # Link Hosting Kalian
-REPO="https://raw.githubusercontent.com/Andyyuda/P/main/"
+REPO="https://raw.githubusercontent.com/Adidastore11/P/main/"
 
 # initialisasi var
 export DEBIAN_FRONTEND=noninteractive
