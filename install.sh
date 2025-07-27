@@ -67,6 +67,7 @@ else
     echo -e " - ${y}Ubuntu 20.04${NC}"
     echo -e " - ${y}Ubuntu 22.04${NC}"
     echo -e " - ${y}Ubuntu 24.04${NC}"
+    echo -e " - ${y}Ubuntu 24.10${NC}"
     echo ""
     echo -e " - ${y}Debian 10${NC}"
     echo -e " - ${y}Debian 11${NC}"
@@ -77,7 +78,8 @@ fi
 
 # Cek versi ID OS
 if [[ ${VERSION_ID} == "10" || ${VERSION_ID} == "11" || ${VERSION_ID} == "12" || \
-      ${VERSION_ID} == "18.04" || ${VERSION_ID} == "20.04" || ${VERSION_ID} == "22.04" || ${VERSION_ID} == "24.04" ]]; then
+      ${VERSION_ID} == "18.04" || ${VERSION_ID} == "20.04" || ${VERSION_ID} == "22.04" || \
+      ${VERSION_ID} == "24.04" || ${VERSION_ID} == "24.10" ]]; then
     echo -ne
 else
     echo -e " ${r}This Script only Support for OS"
@@ -86,6 +88,7 @@ else
     echo -e " - ${y}Ubuntu 20.04${NC}"
     echo -e " - ${y}Ubuntu 22.04${NC}"
     echo -e " - ${y}Ubuntu 24.04${NC}"
+    echo -e " - ${y}Ubuntu 24.10${NC}"
     echo ""
     echo -e " - ${y}Debian 10${NC}"
     echo -e " - ${y}Debian 11${NC}"
