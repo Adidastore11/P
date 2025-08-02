@@ -713,21 +713,19 @@ echo "Banner /etc/issue.net" >>/etc/ssh/sshd_config
 cat > /etc/issue.net << END
 happy conneting
 
-<p style="text-align: center;">
-    <span style="color: #41A85F; font-size: 26px;"><strong>KLMPK VPN</strong></span>
-    <span style="font-size: 26px;"><strong> </strong></span>
-    <span style="color: #F37934; font-size: 26px;"><strong>PREMIUM</strong></span>
-    <span style="font-size: 26px;">&nbsp;</span>
-</p>
-<p style="text-align: center;">
-    <span style="font-family: 'Trebuchet MS', Helvetica, sans-serif;">
-        <span style="color: #E25041; background-color: #61BD6D;">Blitar Jatim</span>
-        <span style="background-color: #61BD6D;">&nbsp;</span>
-    </span>
-</p>
-<p style="text-align: center;">
-    <span style="color: #B8312F;">Telp/WhatsApp</span>:
-    <span style="color: #EFEFEF;">082131861788</span>
+<p style="text-align: center; font-family: sans-serif;">
+  <b><span style="color: green;">┏━━━━━━━━━━ ✫ ━━━━━━━━━━┓</span></b><br>
+  <b><span style="color: #8A95FF;">⇱ DIDA STORE ⇲</span></b><br>
+  <b><span style="color: green;">┗━━━━━━━━━━━━━━━━━━━━━━┛</span></b><br>$
+  <br><span style="color: #FF000E;">⇱ AKUN VPN ⇲</span><br>
+  <span style="color: #F4FF01;">⇱ NO DDOS ⇲</span><br>
+  <span style="color: #3FFFAD;">⇱ NO TORENT ⇲</span><br>
+  <span style="color: #52fc03;">⇱ NO HACKING ⇲</span><br>
+  <span style="color: #0367fc;">⇱ NO MULTILOGIN ⇲</span><br>
+  <span style="color: #9211FF;">⇱ MELANGGAR = Banned! ⇲</span><br>
+  <b><span style="color: green;">┏━━━━━━━━━━ ✫ ━━━━━━━━━━┓</span></b><br>$
+  <br><b><span style="color: #8A95FF;">⇱ BUY HUB ⇲</span></b><br>
+  <b><span style="color: yellow;">wa.me/+6282126352133</span></b>
 </p>
 END
 
