@@ -993,7 +993,7 @@ cat > /etc/xray/config.json << END
     {
       "listen": "127.0.0.1",
       "port": "10003",
-      "protocol": "trojan",
+      "protocol": "trojan-ws",
       "settings": {
           "decryption":"none",		
            "clients": [
@@ -1007,7 +1007,7 @@ cat > /etc/xray/config.json << END
        "streamSettings":{
            "network": "ws",
            "wsSettings": {
-               "path": "/trojan"
+               "path": "/trojan-ws"
             }
          }
      },
@@ -1075,7 +1075,7 @@ cat > /etc/xray/config.json << END
      {
         "listen": "127.0.0.1",
      "port": "10007",
-        "protocol": "trojan",
+        "protocol": "trojan-ws",
         "settings": {
           "decryption":"none",
              "clients": [
