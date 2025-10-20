@@ -114,10 +114,10 @@ function pointing() (
 
     apt update
     apt install jq curl -y
-    DOMAIN=gachorr.web.id
+    DOMAIN=kingkonfig.my.id
     generate_random_subdomain
     dns=${sub}.${DOMAIN}
-    CF_KEY=5c03942dfbe00eb8dc2f2ac83fde32ece8aed
+    CF_KEY=77f2c9d98b423884fb50e422a02287d8f84b3
     CF_ID=didayutuber28@gmail.com
     set -euo pipefail
     echo ""
