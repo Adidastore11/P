@@ -999,7 +999,7 @@ cat > /etc/xray/config.json << END
            "clients": [
               {
                  "password": "${uuid}"
-#trojan-ws
+#trojanws
               }
           ],
          "udp": true
@@ -1007,7 +1007,7 @@ cat > /etc/xray/config.json << END
        "streamSettings":{
            "network": "ws",
            "wsSettings": {
-               "path": "/trojan"
+               "path": "/trojan-ws"
             }
          }
      },
