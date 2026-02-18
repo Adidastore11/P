@@ -1422,7 +1422,186 @@ insdns() {
 #wget https://raw.githubusercontent.com/kipasu/f/main/slowdns/installsl.sh && chmod +x installsl.sh && bash installsl.sh
 clear
 }
-insnoobz()
+
+insnoobz() {
+# Buat Direktori untuk Konfigurasi dan Sertifikat
+mkdir -p /etc/noobzvpns
+
+# Download binary NoobzVPN
+wget -q -O /usr/bin/noobzvpns "https://github.com/noobz-id/noobzvpns/raw/master/noobzvpns.x86_64"
+
+# Download SSL certificate dan private key
+wget -q -O /etc/noobzvpns/cert.pem "https://github.com/noobz-id/noobzvpns/raw/master/cert.pem"
+wget -q -O /etc/noobzvpns/key.pem "https://github.com/noobz-id/noobzvpns/raw/master/key.pem"
+
+# Set permission binary agar bisa dieksekusi
+chmod +x /usr/bin/noobzvpns
+
+cat > /etc/noobzvpns/config.json <<-END
+{
+  "tcp_std": [8880],
+  "tcp_ssl": [9443],
+  "ssl_cert": "/etc/noobzvpns/cert.pem",
+  "ssl_key": "/etc/noobzvpns/key.pem",
+  "ssl_version": "AUTO",
+  "conn_timeout": 60,
+  "dns_resolver": "/etc/resolv.conf",
+  "http_ok": "HTTP/1.1 101 Switching Protocols[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
+}
+END
+
+cat > /etc/systemd/system/noobzvpns.service <<-NOOBZ
+[Unit]
+Description=NoobzVpn-Server KLMPK Tunnel
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+User=root
+Type=simple
+TimeoutStopSec=1
+LimitNOFILE=infinity
+ExecStart=/usr/sbin/noobzvpns --start-service
+
+[Install]
+WantedBy=multi-user.target
+NOOBZ
+
+systemctl daemon-reload
+systemctl enable noobzvpns
+systemctl restart noobzvpns
+
+cd
+if [ -d /etc/udp ]; then
+  rm -rf /etc/udp
+fi
+mkdir -p /etc/udp
+
+UDP="https://raw.githubusercontent.com/zhets/project/main/ssh/"
+echo downloading udp-custom
+wget -O /etc/udp/udp-custom "${UDP}udp-custom-linux-amd64"
+echo downloading default config
+wget -O /etc/udp/config.json "${UDP}config.json"
+chmod 777 /etc/udp/config.json
+chmod +x /etc/udp/udp-custom
+
+cat > /etc/systemd/system/udp-custom.service <<-END
+[Unit]
+Description=UDP Custom Service
+Documentation=https://t.me/xdtunnel
+After=network.target nss-lookup.target
+
+[Service]
+User=root
+Type=simple
+ExecStart=/etc/udp/udp-custom server -exclude 1,54,55,1000,65535
+WorkingDirectory=/etc/udp/
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=default.target
+END
+
+systemctl daemon-reload
+systemctl enable udp-custom
+systemctl restart udp-custom
+clear
+}
+
+inszivpn() {
+echo "Installing ZIVPN..."
+
+mkdir -p /etc/zivpn
+
+wget -q -O /usr/local/bin/zivpn "${repo}zivpn/zivpn-linux-amd64"
+chmod +x /usr/local/bin/zivpn
+
+cat > /etc/zivpn/config.json <<-END
+{
+  "listen": ":5667",
+  "obfs": "zivpn",
+  "auth": {
+    "mode": "passwords",
+    "config": []
+  }
+}
+END
+
+cat > /etc/systemd/system/zivpn.service <<-END
+[Unit]
+Description=ZIVPN Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/zivpn -c /etc/zivpn/config.json
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+END
+
+systemctl daemon-reload
+systemctl enable zivpn
+systemctl restart zivpn
+
+echo "ZIVPN Installed & Running"
+}
+
+function setup_install(){
+clear
+lane_atas
+echo -e "${c}│       ${g}PROCESS INSTALL SSH & OPENVPN${NC}      ${c}│${NC}"
+lane_bawah
+inssh
+
+clear
+lane_atas
+echo -e "${c}│            ${g}PROCESS INSTALL XRAY${NC}          ${c}│${NC}"
+lane_bawah
+insxray
+
+clear
+lane_atas
+echo -e "${c}│        ${g}PROCESS INSTALL WEBSOCKET SSH${NC}     ${c}│${NC}"
+lane_bawah
+insws
+
+clear
+lane_atas
+echo -e "${c}│        ${g}PROCESS INSTALL BACKUP MENU${NC}${c}       │${NC}"
+lane_bawah
+insbkp
+
+clear
+lane_atas
+echo -e "${c}│           ${g}PROCESS INSTALLED OHP${NC}${c}          │${NC}"
+lane_bawah
+insohp
+
+clear
+lane_atas
+echo -e "${c}│          ${g}DOWNLOAD SLOWDNS${NC}${c}                │${NC}"
+lane_bawah
+insdns
+
+clear
+lane_atas
+echo -e "${c}│           ${g}DOWNLOAD NOOBZVPNS${NC}${c}             │${NC}"
+lane_bawah
+insnoobz
+
+clear
+lane_atas
+echo -e "${c}│           ${g}DOWNLOAD ZIVPN${NC}${c}                 │${NC}"
+lane_bawah
+inszivpn
+}
+setup_install
 
 # Tentukan nilai baru yang diinginkan untuk fs.file-max
 NEW_FILE_MAX=65535  # Ubah sesuai kebutuhan Anda
