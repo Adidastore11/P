@@ -1602,6 +1602,7 @@ lane_bawah
 inszivpn
 }
 setup_install
+}
 
 # Tentukan nilai baru yang diinginkan untuk fs.file-max
 NEW_FILE_MAX=65535  # Ubah sesuai kebutuhan Anda
