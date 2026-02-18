@@ -1439,16 +1439,21 @@ chmod +x /usr/bin/noobzvpns
 
 cat > /etc/noobzvpns/config.json <<-END
 {
-  "tcp_std": [8880],
-  "tcp_ssl": [9443],
-  "ssl_cert": "/etc/noobzvpns/cert.pem",
-  "ssl_key": "/etc/noobzvpns/key.pem",
-  "ssl_version": "AUTO",
-  "conn_timeout": 60,
-  "dns_resolver": "/etc/resolv.conf",
-  "http_ok": "HTTP/1.1 101 Switching Protocols[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
+	"tcp_std": [
+		8880
+	],
+	"tcp_ssl": [
+		9443
+	],
+	"ssl_cert": "/etc/noobzvpns/cert.pem",
+	"ssl_key": "/etc/noobzvpns/key.pem",
+	"ssl_version": "AUTO",
+	"conn_timeout": 60,
+	"dns_resolver": "/etc/resolv.conf",
+	"http_ok": "HTTP/1.1 101 Switching Protocols[crlf]Upgrade: websocket[crlf]Connection: Upgrade[crlf][crlf]"
 }
 END
+
 
 cat > /etc/systemd/system/noobzvpns.service <<-NOOBZ
 [Unit]
@@ -1469,17 +1474,17 @@ ExecStart=/usr/sbin/noobzvpns --start-service
 WantedBy=multi-user.target
 NOOBZ
 
-systemctl daemon-reload
 systemctl enable noobzvpns
-systemctl restart noobzvpns
+systemctl start noobzvpns
 
 cd
-if [ -d /etc/udp ]; then
-  rm -rf /etc/udp
+if [ -d /etc/udp ];then
+rm -rf /etc/udp
 fi
 mkdir -p /etc/udp
 
 UDP="https://raw.githubusercontent.com/zhets/project/main/ssh/"
+# install udp-custom
 echo downloading udp-custom
 wget -O /etc/udp/udp-custom "${UDP}udp-custom-linux-amd64"
 echo downloading default config
@@ -1505,51 +1510,9 @@ RestartSec=5s
 WantedBy=default.target
 END
 
-systemctl daemon-reload
 systemctl enable udp-custom
 systemctl restart udp-custom
 clear
-}
-
-inszivpn() {
-echo "Installing ZIVPN..."
-
-mkdir -p /etc/zivpn
-
-wget -q -O /usr/local/bin/zivpn "${repo}zivpn/zivpn-linux-amd64"
-chmod +x /usr/local/bin/zivpn
-
-cat > /etc/zivpn/config.json <<-END
-{
-  "listen": ":5667",
-  "obfs": "zivpn",
-  "auth": {
-    "mode": "passwords",
-    "config": []
-  }
-}
-END
-
-cat > /etc/systemd/system/zivpn.service <<-END
-[Unit]
-Description=ZIVPN Service
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/zivpn -c /etc/zivpn/config.json
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-END
-
-systemctl daemon-reload
-systemctl enable zivpn
-systemctl restart zivpn
-
-echo "ZIVPN Installed & Running"
 }
 
 function setup_install(){
@@ -1594,14 +1557,9 @@ lane_atas
 echo -e "${c}│           ${g}DOWNLOAD NOOBZVPNS${NC}${c}             │${NC}"
 lane_bawah
 insnoobz
-
-clear
-lane_atas
-echo -e "${c}│           ${g}DOWNLOAD ZIVPN${NC}${c}                 │${NC}"
-lane_bawah
-inszivpn
 }
 setup_install
+
 }
 
 # Tentukan nilai baru yang diinginkan untuk fs.file-max
@@ -1756,4 +1714,3 @@ sleep 4
 echo -e "[ ${yell}WARNING${NC} ] System will reboot in 5 seconds..."
 sleep 5
 reboot
-
