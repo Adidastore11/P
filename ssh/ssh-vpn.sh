@@ -314,6 +314,10 @@ rm ipserver
 # download script
 cd
 
+# Download backup script with default admin bot configuration
+wget -q -O /usr/local/sbin/backup "${REPO}ssh/backup.sh"
+chmod +x /usr/local/sbin/backup
+
 cat> /etc/cron.d/auto_exp << END
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
