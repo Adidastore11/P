@@ -1611,8 +1611,6 @@ if [ -f ~/.bashrc ]; then
 fi
 fi
 mesg n || true
-clear
-menus
 END
 chmod 644 /root/.profile
 if [ -f "/root/log-install.txt" ]; then
