@@ -1,0 +1,264 @@
+#!/bin/bash
+
+# COLOR VALIDATION
+clear
+y='\033[1;33m' #yellow
+BGX="\033[42m"
+CYAN="\033[96m"
+z="\033[96m"
+BIRed='\033[1;91m'        # Red
+RED='\033[0;31m'
+NC='\033[0m'
+gray="\e[1;30m"
+Blue="\033[0;34m"
+green='\033[0;32m'
+grenbo="\e[92;1m"
+purple="\033[1;95m"
+YELL='\033[0;33m'
+
+#INTALLER-UDP
+UDPX="https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1S3IE25v_fyUfCLslnujFBSBMNunDHDk2' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1S3IE25v_fyUfCLslnujFBSBMNunDHDk2"
+if [[ ! -f /root/.isp ]]; then
+curl -sS ipinfo.io/org?token=7a814b6263b02c > /root/.isp
+fi
+if [[ ! -f /root/.city ]]; then
+curl -sS ipinfo.io/city?token=7a814b6263b02c > /root/.city
+fi
+if [[ ! -f /root/.myip ]]; then
+curl -sS ipv4.icanhazip.com > /root/.myip
+fi
+
+export IP=$(cat /root/.myip);
+export ISP=$(cat /root/.isp);
+export CITY=$(cat /root/.city);
+domain=$(cat /etc/xray/domain)
+RAM=$(free -m | awk 'NR==2 {print $2}')
+USAGERAM=$(free -m | awk 'NR==2 {print $3}')
+MEMOFREE=$(printf '%-1s' "$(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2 }')")
+LOADCPU=$(printf '%-0.00001s' "$(top -bn1 | awk '/Cpu/ { cpu = "" 100 - $8 "%" }; END { print cpu }')")
+MODEL=$(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/PRETTY_NAME//g')
+CORE=$(printf '%-1s' "$(grep -c cpu[0-9] /proc/stat)")
+DATEVPS=$(date +'%d/%m/%Y')
+TIMEZONE=$(printf '%(%H:%M:%S)T')
+SERONLINE=$(uptime -p | cut -d " " -f 2-10000)
+clear
+MYIP=$(curl -sS ipv4.icanhazip.com)
+echo ""
+
+#########################
+# USERNAME
+rm -f /usr/bin/user
+username=$(curl -sS https://raw.githubusercontent.com/Adidastore11/izin/main/ip | grep $MYIP | awk '{print $2}')
+echo "$username" >/usr/bin/user
+# validity
+rm -f /usr/bin/e
+valid=$(curl -sS https://raw.githubusercontent.com/Adidastore11/izin/main/ip | grep $MYIP | awk '{print $3}')
+echo "$valid" >/usr/bin/e
+# DETAIL ORDER
+username=$(cat /usr/bin/user)
+oid=$(cat /usr/bin/ver)
+exp=$(cat /usr/bin/e)
+clear
+# CERTIFICATE STATUS
+d1=$(date -d "$valid" +%s)
+d2=$(date -d "$today" +%s)
+certifacate=$(((d1 - d2) / 86400))
+# VPS Information
+DATE=$(date +'%Y-%m-%d')
+datediff() {
+    d1=$(date -d "$1" +%s)
+    d2=$(date -d "$2" +%s)
+    echo -e "$COLOR1 $NC Expiry In   : $(( (d1 - d2) / 86400 )) Days"
+}
+mai="datediff "$Exp" "$DATE""
+
+# Status ExpiRED Active | Tekiro Vpn
+Info="(${green}Active${NC})"
+Error="(${RED}ExpiRED${NC})"
+today=`date -d "0 days" +"%Y-%m-%d"`
+Exp1=$(curl -sS https://raw.githubusercontent.com/Adidastore11/izin/main/ip | grep $MYIP | awk '{print $3}')
+if [[ $today < $Exp1 ]]; then
+sts="${Info}"
+else
+sts="${Error}"
+fi
+echo -e "\e[32mloading...\e[0m"
+clear
+
+# OS Uptime
+uptime="$(uptime -p | cut -d " " -f 2-10)"
+cpu_usage1="$(ps aux | awk 'BEGIN {sum=0} {sum+=$3}; END {print sum}')"
+cpu_usage="$((${cpu_usage1/\.*} / ${coREDiilik:-1}))"
+cpu_usage+=" %"
+WKT=$(curl -s ipinfo.io/timezone )
+DAY=$(date +%A)
+DATE=$(date +%m/%d/%Y)
+DATE2=$(date -R | cut -d " " -f -5)
+IPVPS=$(wget -qO- ipinfo.io/ip)
+cname=$( awk -F: '/model name/ {name=$2} END {print name}' /proc/cpuinfo )
+cores=$( awk -F: '/model name/ {core++} END {print core}' /proc/cpuinfo )
+freq=$( awk -F: ' /cpu MHz/ {freq=$2} END {print freq}' /proc/cpuinfo )
+tram=$( free -m | awk 'NR==2 {print $2}' )
+uram=$( free -m | awk 'NR==2 {print $3}' )
+fram=$( free -m | awk 'NR==2 {print $4}' )
+clear
+ssh_service=$(/etc/init.d/ssh status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+dropbear_service=$(/etc/init.d/dropbear status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+haproxy_service=$(systemctl status haproxy | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+xray_service=$(systemctl status xray | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+nginx_service=$(systemctl status nginx | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+UdpSSH=$(systemctl status udp-custom | grep active | awk '{print $3}' | sed 's/(//g' | sed 's/)//g')
+noobzvpn_service=$(systemctl status noobzvpns | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+
+#Status | Geo Project
+clear
+# STATUS SERVICE  SSH
+if [[ $ssh_service == "running" ]]; then
+   status_ssh="${green}ON${NC}"
+else
+   status_ssh="${z}OFF${NC} "
+fi
+
+# // SSH Websocket Proxy
+ssh_ws=$( systemctl status ws | grep Active | awk '{print $3}' | sed 's/(//g' | sed 's/)//g' )
+if [[ $ssh_ws == "running" ]]; then
+    status_ws_epro="${green}ON${NC}"
+else
+    status_ws_epro="${z}OFF${NC} "
+fi
+
+# STATUS SERVICE HAPROXY
+if [[ $haproxy_service == "running" ]]; then
+   status_haproxy="${green}ON${NC}"
+else
+   status_haproxy="${z}OFF${NC} "
+fi
+
+# STATUS SERVICE XRAY
+if [[ $xray_service == "running" ]]; then
+   status_xray="${green}ON${NC}"
+else
+   status_xray="${z}OFF${NC} "
+fi
+
+# STATUS SERVICE NGINX
+if [[ $nginx_service == "running" ]]; then
+   status_nginx="${green}ON${NC}"
+else
+   status_nginx="${z}OFF${NC} "
+fi
+
+# STATUS SERVICE Dropbear
+if [[ $dropbear_service == "running" ]]; then
+   status_dropbear="${green}ON${NC}"
+else
+   status_dropbear="${z}OFF${NC} "
+fi
+
+# STATUS SERVICE  SSH UDP
+if [[ $UdpSSH == "running" ]]; then
+   status_udp="${green}ON${NC}"
+else
+   status_udp="${RED}OFF${NC}"
+fi
+
+noobzvpn_service=$(systemctl status noobzvpns | grep Active | awk '{print $3}' | sed 's/(//g' | sed 's/)//g') 2>/dev/null
+if [[ $noobzvpn_service == "running" ]]; then
+    status_noobzvpn="${green}ON${NC}"
+else
+    status_noobzvpn="${z}OFF${NC} "
+fi
+
+##### INFO AKUN
+vlx=$(grep -E "^#& " "/etc/xray/config.json" | sort -u | wc -l 2>/dev/null)
+let vla=$vlx/2
+
+vmc=$(grep -E "^### " "/etc/xray/config.json" | sort -u | wc -l 2>/dev/null)
+
+ssh1=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd | wc -l 2>/dev/null)
+
+trx=$(grep -E "^#! " "/etc/xray/config.json" | sort -u | wc -l 2>/dev/null)
+let trb=$trx/2
+
+ssx=$(grep -c -E "^#!# " "/etc/xray/config.json" 2>/dev/null)
+let ssa=$ssx/2
+
+noob=$(noobzvpns -j print-all 2>/dev/null | jq '.[] | .username' | wc -l)
+
+# WARNA ANSI
+NC="\033[0m"
+BOLD="\033[1m"
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+BLUE="\033[1;34m"
+MAGENTA="\033[1;35m"
+CYAN="\033[1;36m"
+WHITE="\033[1;37m"
+GRAY="\033[1;30m"
+
+
+# ============================
+# TYPEWRITER ANIMASI
+# ============================
+
+typewriter() {
+  local text="$1"
+  local delay="${2:-0.07}"  # default 0.07 detik per huruf
+  for ((i=0; i<${#text}; i++)); do
+    echo -ne "${BOLD}${CYAN}${text:$i:1}${NC}"
+    sleep $delay
+  done
+  echo ""
+}
+
+# Animasi typewriter: TULISAN BESAR & KANJI
+clear
+echo -e "\n\n"
+typewriter "WELCOME TO KLMPK VPN TUNNEL" 0.08
+echo -e "${MAGENTA}${BOLD}クラムパック・トンネル・システム${NC}"
+sleep 1.5
+
+# ============================
+# INFORMASI SISTEM PANEL
+# ============================
+
+clear
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}${MAGENTA}『 アンディユダ・トンネルシステム 』${NC}"
+echo -e "${CYAN} (Adidastore11 Tonneru Shisutemu) - Sistem Panel Premium VPS${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# INFO SISTEM
+echo -e "${YELLOW}${BOLD}《 Jōhō Shisutemu | 情報システム 》${NC}"
+echo -e "${WHITE}▪ OS               : ${CYAN}$MODEL"
+echo -e "${WHITE}▪ RAM              : ${CYAN}$RAM MB"
+echo -e "${WHITE}▪ SWAP             : ${CYAN}$uram MB"
+echo -e "${WHITE}▪ Kota             : ${CYAN}$CITY"
+echo -e "${WHITE}▪ ISP              : ${CYAN}$ISP"
+echo -e "${WHITE}▪ IP VPS           : ${CYAN}$IPVPS"
+echo -e "${WHITE}▪ Domain           : ${CYAN}$domain"
+echo -e "${WHITE}▪ Uptime           : ${CYAN}$SERONLINE"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# LAYANAN VPN
+echo -e "${YELLOW}${BOLD}《 Sābisu Jōkyō | サービス状況 》${NC}"
+echo -e "${WHITE}◆ SSH             : ${GREEN}$status_ssh${NC}     | Jumlah : ${CYAN}$ssh1"
+echo -e "${WHITE}◆ VMESS           : ${GREEN}$status_xray${NC}     | Jumlah : ${CYAN}$vmc"
+echo -e "${WHITE}◆ VLESS           : ${GREEN}$status_xray${NC}     | Jumlah : ${CYAN}$vlx"
+echo -e "${WHITE}◆ TROJAN          : ${GREEN}$status_xray${NC}     | Jumlah : ${CYAN}$trx"
+echo -e "${WHITE}◆ SOCKS           : ${GREEN}$status_xray${NC}     | Jumlah : ${CYAN}$ssx"
+echo -e "${WHITE}◆ NOOBVPNS        : ${GREEN}$status_noobzvpn${NC}     | Jumlah : ${CYAN}$noob"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# INFO KLIEN
+echo -e "${YELLOW}${BOLD}《 Kojin Jōhō | 個人情報 》${NC}"
+echo -e "${WHITE}◎ Versi Panel      : ${YELLOW}$(cat /usr/local/sbin/version)"
+echo -e "${WHITE}◎ Nama Pengguna    : ${YELLOW}$username"
+echo -e "${WHITE}◎ Masa Aktif       : ${YELLOW}$certifacate Hari"
+echo -e "${WHITE}◎ Status Panel     : ${GREEN}AKTIF${NC}   | Mode : ${CYAN}PREMIUM${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# FOOTER
+echo -e "${WHITE}Ketik perintah ${BOLD}${CYAN}menu${NC}${WHITE} untuk membuka panel utama."
+echo -e "${GRAY}~ Adidastore11 Premium Tunnel ~    日本品質・安心・高速${NC}"
