@@ -1708,7 +1708,10 @@ echo -e "${c}┌─────────────────────�
 echo -e "${c}│  ${g}INSTALL SCRIPT SELESAI..${NC}                  ${c}│${NC}"
 echo -e "${c}└────────────────────────────────────────────┘${NC}"
 echo  ""
-sleep 4
-echo -e "[ ${yell}WARNING${NC} ] System will reboot in 5 seconds..."
-sleep 5
+sleep 2
+clear
+menu
+echo  ""
+read -p "Press [ Enter ] to reboot..."
 reboot
+
