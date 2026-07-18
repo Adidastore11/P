@@ -1611,6 +1611,8 @@ if [ -f ~/.bashrc ]; then
 fi
 fi
 mesg n || true
+clear
+menus
 END
 chmod 644 /root/.profile
 if [ -f "/root/log-install.txt" ]; then
@@ -1708,10 +1710,7 @@ echo -e "${c}┌─────────────────────�
 echo -e "${c}│  ${g}INSTALL SCRIPT SELESAI..${NC}                  ${c}│${NC}"
 echo -e "${c}└────────────────────────────────────────────┘${NC}"
 echo  ""
-sleep 2
-clear
-menu
-echo  ""
-read -p "Press [ Enter ] to reboot..."
+sleep 4
+echo -e "[ ${yell}WARNING${NC} ] System will reboot in 5 seconds..."
+sleep 5
 reboot
-
