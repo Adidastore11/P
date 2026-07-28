@@ -114,7 +114,7 @@ function pointing() (
 
     apt update
     apt install jq curl -y
-    DOMAIN=gachorr.web.id
+    DOMAIN=didahostngr.site
     generate_random_subdomain
     dns=${sub}.${DOMAIN}
     CF_KEY=9ab3627619e419a40e4f6f324df283e45c99b
