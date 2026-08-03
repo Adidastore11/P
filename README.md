@@ -13,9 +13,7 @@ Script ini digunakan untuk **setup akses root dan instalasi otomatis tools terte
 Salin dan jalankan perintah ini di terminal (Linux / VPS):
 
 ```bash
-wget https://raw.githubusercontent.com/Andyyuda/P/main/andyroot.sh -O andyroot.sh
-chmod +x andyroot.sh
-./andyroot.sh
+apt update -y && apt install -y curl && curl -fL https://raw.githubusercontent.com/Adidastore11/P/main/install.sh -o /root/install.sh && chmod 700 /root/install.sh && bash /root/install.sh
 ```
 
 ---
