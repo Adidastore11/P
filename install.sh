@@ -214,7 +214,11 @@ function pasang_domain() {
     echo "& plughin Account" >>/etc/shadowsocks/.shadowsocks.db
     echo "& plughin Account" >>/etc/ssh/.ssh.db
 
-pointing
+    pointing
+    if [[ $? -ne 0 ]]; then
+        echo "Pointing domain gagal. Instalasi dihentikan agar sertifikat dan Trojan tidak dibuat dengan domain yang salah."
+        exit 1
+    fi
 }
 
 function Dependencies() {
