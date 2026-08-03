@@ -102,10 +102,6 @@ else
     exit 0
 fi
 
-function generate_random_subdomain() {
-sub=$(head /dev/urandom | tr -dc a-z0-9 | head -c 8)
-}
-
 function pointing() (
     if [ -f /etc/xray/domain ] && [ -s /etc/xray/domain ]; then
         echo "Domain sudah ada, melewati proses pointing."
@@ -113,47 +109,75 @@ function pointing() (
     fi
 
     apt update
-    apt install jq curl -y
-    DOMAIN=didahostngr.site
-    generate_random_subdomain
-    dns=${sub}.${DOMAIN}
-	CF_KEY=cfk_PD9K6pR5FIf2pJbaTnuOW9NUyOwXvqKzQtAMJdggaf5d2b3f
-    CF_ID=didayutuber28@gmail.com
-    set -euo pipefail
-    echo ""
-    echo "Proses Pointing Domain ${dns}..."
-    sleep 1
-    ZONE=$(curl -sLX GET "https://api.cloudflare.com/client/v4/zones?name=${DOMAIN}&status=active" \
-         -H "X-Auth-Email: ${CF_ID}" \
-         -H "X-Auth-Key: ${CF_KEY}" \
-         -H "Content-Type: application/json" | jq -r .result[0].id)
+    apt install -y jq curl
+    mkdir -p /etc/xray
 
-    RECORD=$(curl -sLX GET "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records?name=${dns}" \
-         -H "X-Auth-Email: ${CF_ID}" \
-         -H "X-Auth-Key: ${CF_KEY}" \
-         -H "Content-Type: application/json" | jq -r .result[0].id)
+    # Semua input dibaca dari terminal, jadi token tidak tersimpan di file atau GitHub.
+    read -r -p "Root domain Cloudflare (contoh: gachorr.web.id): " DOMAIN < /dev/tty
+    read -r -p "Subdomain (contoh: tesss): " sub < /dev/tty
+    read -r -s -p "Paste Cloudflare API Token (input disembunyikan): " CF_TOKEN < /dev/tty
+    echo
 
-    if [[ "${#RECORD}" -le 10 ]]; then
-         RECORD=$(curl -sLX POST "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records" \
-         -H "X-Auth-Email: ${CF_ID}" \
-         -H "X-Auth-Key: ${CF_KEY}" \
-         -H "Content-Type: application/json" \
-         --data '{"type":"A","name":"'${dns}'","content":"'${IP}'","ttl":120,"proxied":true}' | jq -r .result.id)
+    DOMAIN=${DOMAIN,,}
+    sub=${sub,,}
+
+    if [[ -z "${DOMAIN}" || -z "${sub}" || -z "${CF_TOKEN}" ]]; then
+        echo "Domain, subdomain, dan API token wajib diisi."
+        exit 1
     fi
 
-    RESULT=$(curl -sLX PUT "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records/${RECORD}" \
-         -H "X-Auth-Email: ${CF_ID}" \
-         -H "X-Auth-Key: ${CF_KEY}" \
-         -H "Content-Type: application/json" \
-         --data '{"type":"A","name":"'${dns}'","content":"'${IP}'","ttl":120,"proxied":true}')
+    if [[ "${DOMAIN}" != *.* || ! "${sub}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
+        echo "Format domain atau subdomain tidak valid."
+        exit 1
+    fi
 
-    # Menyimpan domain ke /etc/xray/domain hanya jika tidak ada
-    echo "$dns" > /etc/xray/domain
-    echo ""
-    sleep 1
-    echo -e "Subdomain kamu adalah ${dns}"
-    cd
-    sleep 2
+    dns="${sub}.${DOMAIN}"
+    set -euo pipefail
+
+    cf_api() {
+        curl --fail-with-body -sS "$@" \
+            -H "Authorization: Bearer ${CF_TOKEN}" \
+            -H "Content-Type: application/json"
+    }
+
+    echo "Proses pointing domain ${dns}..."
+
+    ZONE_JSON=$(cf_api -X GET \
+        "https://api.cloudflare.com/client/v4/zones?name=${DOMAIN}&status=active")
+    ZONE=$(jq -r '.result[0].id // empty' <<< "${ZONE_JSON}")
+
+    if [[ -z "${ZONE}" ]]; then
+        echo "Zone ${DOMAIN} tidak ditemukan atau API token tidak punya izin Zone:Read."
+        exit 1
+    fi
+
+    RECORD_JSON=$(cf_api -X GET \
+        "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records?name=${dns}")
+    RECORD=$(jq -r '.result[0].id // empty' <<< "${RECORD_JSON}")
+
+    DATA=$(jq -nc \
+        --arg name "${dns}" \
+        --arg content "${IP}" \
+        '{type:"A", name:$name, content:$content, ttl:120, proxied:false}')
+
+    if [[ -z "${RECORD}" ]]; then
+        RESULT=$(cf_api -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records" \
+            --data "${DATA}")
+    else
+        RESULT=$(cf_api -X PUT \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records/${RECORD}" \
+            --data "${DATA}")
+    fi
+
+    if ! jq -e '.success == true' >/dev/null <<< "${RESULT}"; then
+        echo "Pointing Cloudflare gagal. Cek token, scope zone, dan IP VPS."
+        exit 1
+    fi
+
+    printf '%s\n' "${dns}" > /etc/xray/domain
+    unset CF_TOKEN
+    echo "Pointing berhasil: ${dns} -> ${IP}"
 )
 
 function pasang_domain() {
