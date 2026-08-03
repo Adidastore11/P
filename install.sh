@@ -117,7 +117,8 @@ function pointing() (
     DOMAIN=didahostngr.site
     generate_random_subdomain
     dns=${sub}.${DOMAIN}
-    CF_KEY=9ab3627619e419a40e4f6f324df283e45c99b
+    read -rsp "Masukkan Cloudflare Global API Key: " CF_KEY
+	echo
     CF_ID=didayutuber28@gmail.com
     set -euo pipefail
     echo ""
