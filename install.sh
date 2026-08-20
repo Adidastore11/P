@@ -1570,9 +1570,19 @@ insapi() {
         exit 1
     fi
 
-    if ! id -u vpnapi >/dev/null 2>&1; then
-        useradd --system --home-dir /nonexistent --shell /usr/sbin/nologin vpnapi
+    # systemd menjalankan service dengan User dan Group vpnapi. Jangan
+    # mengandalkan default useradd karena pada sebagian distro user system
+    # dibuat tanpa private group, lalu service gagal dengan status=217/USER.
+    if ! getent group vpnapi >/dev/null 2>&1; then
+        groupadd --system vpnapi
     fi
+    if ! id -u vpnapi >/dev/null 2>&1; then
+        useradd --system --gid vpnapi --home-dir /nonexistent --shell /usr/sbin/nologin vpnapi
+    fi
+    getent passwd vpnapi >/dev/null 2>&1 && getent group vpnapi >/dev/null 2>&1 || {
+        echo "User/group vpnapi gagal dibuat; API VPS tidak dapat diaktifkan."
+        exit 1
+    }
 
     install -d -m 755 /opt/vpn-api
     install -d -m 755 /usr/local/lib/vpn-api
