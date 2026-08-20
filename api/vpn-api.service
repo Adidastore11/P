@@ -1,0 +1,18 @@
+[Unit]
+Description=VPN management API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=vpnapi
+Group=vpnapi
+EnvironmentFile=/etc/vpn-api/api.env
+ExecStart=NODE_BIN_PLACEHOLDER /opt/vpn-api/server.js
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

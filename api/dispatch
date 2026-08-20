@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly SCRIPT_DIR='/usr/local/sbin'
+
+fail() {
+    logger -t vpn-api -- "dispatch rejected: $*"
+    echo 'invalid API action or arguments' >&2
+    exit 64
+}
+
+valid_word() { [[ "$1" =~ ^[A-Za-z0-9_-]{3,32}$ ]]; }
+valid_positive_int() {
+    local value="$1" maximum="$2"
+    [[ "$value" =~ ^[0-9]+$ ]] && (( value >= 1 && value <= maximum ))
+}
+
+run_script() {
+    local script_name="$1"
+    shift
+    local script_path="${SCRIPT_DIR}/${script_name}"
+    [[ -x "$script_path" ]] || fail "script ${script_name} is unavailable"
+    logger -t vpn-api -- "running ${script_name}"
+    exec "$script_path" "$@"
+}
+
+[[ "${EUID}" -eq 0 ]] || fail 'root execution required'
+[[ "$#" -ge 1 ]] || fail 'missing action'
+action="$1"
+shift
+
+case "$action" in
+    ssh-create)
+        [[ "$#" -eq 4 ]] && valid_word "$1" && valid_word "$2" && valid_positive_int "$3" 1000 && valid_positive_int "$4" 3650 || fail 'ssh-create validation'
+        run_script addssh "$@" ;;
+    ssh-delete)
+        [[ "$#" -eq 1 ]] && valid_word "$1" || fail 'ssh-delete validation'
+        run_script delssh "$@" ;;
+    ssh-renew)
+        [[ "$#" -eq 2 ]] && valid_word "$1" && valid_positive_int "$2" 3650 || fail 'ssh-renew validation'
+        run_script renewssh "$@" ;;
+    v2ray-create-vmess)
+        [[ "$#" -eq 4 ]] && valid_word "$1" && valid_positive_int "$2" 3650 && valid_positive_int "$3" 1048576 && valid_positive_int "$4" 1000 || fail 'vmess-create validation'
+        run_script addws "$@" ;;
+    v2ray-create-vless)
+        [[ "$#" -eq 4 ]] && valid_word "$1" && valid_positive_int "$2" 3650 && valid_positive_int "$3" 1048576 && valid_positive_int "$4" 1000 || fail 'vless-create validation'
+        run_script addvless "$@" ;;
+    v2ray-create-trojan)
+        [[ "$#" -eq 4 ]] && valid_word "$1" && valid_positive_int "$2" 3650 && valid_positive_int "$3" 1048576 && valid_positive_int "$4" 1000 || fail 'trojan-create validation'
+        run_script addtr "$@" ;;
+    v2ray-delete-vmess)
+        [[ "$#" -eq 1 ]] && valid_word "$1" || fail 'vmess-delete validation'
+        run_script delws "$@" ;;
+    v2ray-delete-vless)
+        [[ "$#" -eq 1 ]] && valid_word "$1" || fail 'vless-delete validation'
+        run_script delvless "$@" ;;
+    v2ray-delete-trojan)
+        [[ "$#" -eq 1 ]] && valid_word "$1" || fail 'trojan-delete validation'
+        run_script deltr "$@" ;;
+    v2ray-renew-vmess)
+        [[ "$#" -eq 4 ]] && valid_word "$1" && valid_positive_int "$2" 3650 && valid_positive_int "$3" 1048576 && valid_positive_int "$4" 1000 || fail 'vmess-renew validation'
+        run_script renewws "$@" ;;
+    v2ray-renew-vless)
+        [[ "$#" -eq 4 ]] && valid_word "$1" && valid_positive_int "$2" 3650 && valid_positive_int "$3" 1048576 && valid_positive_int "$4" 1000 || fail 'vless-renew validation'
+        run_script renewvless "$@" ;;
+    v2ray-renew-trojan)
+        [[ "$#" -eq 4 ]] && valid_word "$1" && valid_positive_int "$2" 3650 && valid_positive_int "$3" 1048576 && valid_positive_int "$4" 1000 || fail 'trojan-renew validation'
+        run_script renewtr "$@" ;;
+    *) fail 'unknown action' ;;
+esac
