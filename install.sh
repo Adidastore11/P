@@ -132,6 +132,7 @@ function pointing() (
     fi
 
     dns="${sub}.${DOMAIN}"
+    api_dns="api.${dns}"
     set -euo pipefail
 
     cf_api() {
@@ -151,33 +152,41 @@ function pointing() (
         exit 1
     fi
 
-    RECORD_JSON=$(cf_api -X GET \
-        "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records?name=${dns}")
-    RECORD=$(jq -r '.result[0].id // empty' <<< "${RECORD_JSON}")
+    upsert_a_record() {
+        local hostname="$1"
+        local record_json record data result
 
-    DATA=$(jq -nc \
-        --arg name "${dns}" \
-        --arg content "${IP}" \
-        '{type:"A", name:$name, content:$content, ttl:120, proxied:false}')
+        record_json=$(cf_api -X GET \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records?name=${hostname}")
+        record=$(jq -r '.result[0].id // empty' <<< "${record_json}")
+        data=$(jq -nc \
+            --arg name "${hostname}" \
+            --arg content "${IP}" \
+            '{type:"A", name:$name, content:$content, ttl:120, proxied:false}')
 
-    if [[ -z "${RECORD}" ]]; then
-        RESULT=$(cf_api -X POST \
-            "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records" \
-            --data "${DATA}")
-    else
-        RESULT=$(cf_api -X PUT \
-            "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records/${RECORD}" \
-            --data "${DATA}")
-    fi
+        if [[ -z "${record}" ]]; then
+            result=$(cf_api -X POST \
+                "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records" \
+                --data "${data}")
+        else
+            result=$(cf_api -X PUT \
+                "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_records/${record}" \
+                --data "${data}")
+        fi
 
-    if ! jq -e '.success == true' >/dev/null <<< "${RESULT}"; then
+        jq -e '.success == true' >/dev/null <<< "${result}"
+    }
+
+    if ! upsert_a_record "${dns}" || ! upsert_a_record "${api_dns}"; then
         echo "Pointing Cloudflare gagal. Cek token, scope zone, dan IP VPS."
         exit 1
     fi
 
     printf '%s\n' "${dns}" > /etc/xray/domain
+    install -d -m 700 /etc/vpn-api
+    printf '%s\n' "${api_dns}" > /etc/vpn-api/domain
     unset CF_TOKEN
-    echo "Pointing berhasil: ${dns} -> ${IP}"
+    echo "Pointing berhasil: ${dns} dan ${api_dns} -> ${IP}"
 )
 
 function pasang_domain() {
@@ -929,18 +938,21 @@ uuid=$(cat /proc/sys/kernel/random/uuid)
 ## crt xray
 systemctl stop nginx
 domain=$(cat /etc/xray/domain)
+api_domain=$(cat /etc/vpn-api/domain)
 mkdir /root/.acme.sh
 curl https://acme-install.netlify.app/acme.sh -o /root/.acme.sh/acme.sh
 chmod +x /root/.acme.sh/acme.sh
 /root/.acme.sh/acme.sh --upgrade --auto-upgrade
 /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-/root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
+/root/.acme.sh/acme.sh --issue -d "$domain" -d "$api_domain" --standalone -k ec-256
 ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
 
 # nginx renew ssl
 echo -n '#!/bin/bash
 /etc/init.d/nginx stop
 "/root/.acme.sh"/acme.sh --cron --home "/root/.acme.sh" &> /root/renew_ssl.log
+cat /etc/xray/xray.key /etc/xray/xray.crt > /etc/haproxy/hap.pem
+systemctl reload haproxy
 /etc/init.d/nginx start
 /etc/init.d/nginx status
 ' > /usr/local/bin/ssl_renew.sh
@@ -958,6 +970,7 @@ wget -q -O /etc/nginx/conf.d/xray.conf "${repo}xray/xray.conf"
 wget -q -O /etc/haproxy/haproxy.cfg "${repo}xray/haproxy.cfg"
 sed -i 's/xxx/$domain/' /etc/nginx/conf.d/xray.conf
 sed -i 's/xxx/$domain/' /etc/haproxy/haproxy.cfg
+sed -i "s/API_DOMAIN_PLACEHOLDER/${api_domain}/g" /etc/haproxy/haproxy.cfg
 cat /etc/xray/xray.key /etc/xray/xray.crt | tee /etc/haproxy/hap.pem
 
 
@@ -1324,6 +1337,10 @@ systemctl enable xray
 systemctl restart xray
 systemctl restart nginx
 systemctl enable haproxy
+haproxy -c -f /etc/haproxy/haproxy.cfg || {
+  echo "Konfigurasi HAProxy tidak valid; layanan VPN tidak direstart."
+  exit 1
+}
 systemctl restart haproxy
 systemctl enable runn
 systemctl restart runn
@@ -1543,6 +1560,59 @@ systemctl restart udp-custom
 clear
 }
 
+insapi() {
+    echo -e "[ INFO ] Installing VPN management API"
+    apt install -y nodejs sudo
+
+    node_bin=$(command -v node || command -v nodejs || true)
+    if [[ -z "$node_bin" ]]; then
+        echo "Node.js gagal terpasang; API VPS tidak dapat diaktifkan."
+        exit 1
+    fi
+
+    if ! id -u vpnapi >/dev/null 2>&1; then
+        useradd --system --home-dir /nonexistent --shell /usr/sbin/nologin vpnapi
+    fi
+
+    install -d -m 755 /opt/vpn-api
+    install -d -m 755 /usr/local/lib/vpn-api
+    install -d -m 750 -o root -g vpnapi /etc/vpn-api
+
+    wget -q -O /opt/vpn-api/server.js "${repo}api/server.js"
+    wget -q -O /usr/local/lib/vpn-api/dispatch "${repo}api/dispatch"
+    wget -q -O /etc/systemd/system/vpn-api.service "${repo}api/vpn-api.service"
+    sed -i "s|NODE_BIN_PLACEHOLDER|${node_bin}|g" /etc/systemd/system/vpn-api.service
+
+    chmod 644 /opt/vpn-api/server.js /etc/systemd/system/vpn-api.service
+    chown root:root /opt/vpn-api/server.js /etc/systemd/system/vpn-api.service
+    chmod 750 /usr/local/lib/vpn-api/dispatch
+    chown root:root /usr/local/lib/vpn-api/dispatch
+
+    api_key=$(openssl rand -hex 32)
+    umask 077
+    printf 'API_KEY=%s\nPORT=3000\nCMD_TIMEOUT_MS=120000\n' "$api_key" > /etc/vpn-api/api.env
+    chown root:vpnapi /etc/vpn-api/api.env
+    chmod 640 /etc/vpn-api/api.env
+
+    cat > /etc/sudoers.d/vpn-api <<'EOF'
+vpnapi ALL=(root) NOPASSWD: /usr/local/lib/vpn-api/dispatch
+EOF
+    chmod 440 /etc/sudoers.d/vpn-api
+    visudo -cf /etc/sudoers.d/vpn-api >/dev/null
+
+    systemctl daemon-reload
+    systemctl enable vpn-api
+    systemctl restart vpn-api
+    systemctl is-active --quiet vpn-api || {
+        echo "VPN API gagal aktif. Cek: systemctl status vpn-api"
+        exit 1
+    }
+
+    printf '%s\n' "$api_key" > /root/.vpn-api-key-install
+    chmod 600 /root/.vpn-api-key-install
+    unset api_key node_bin
+}
+
 function setup_install(){
 clear
 lane_atas
@@ -1584,7 +1654,13 @@ clear
 lane_atas
 echo -e "${c}│           ${g}DOWNLOAD NOOBZVPNS${NC}${c}             │${NC}"
 lane_bawah
-insnoobz
+    insnoobz
+
+    clear
+    lane_atas
+    echo -e "[ INFO ] INSTALL VPN MANAGEMENT API"
+    lane_bawah
+    insapi
 }
 setup_install
 
@@ -1738,6 +1814,15 @@ echo -e "${c}┌─────────────────────�
 echo -e "${c}│  ${g}INSTALL SCRIPT SELESAI..${NC}                  ${c}│${NC}"
 echo -e "${c}└────────────────────────────────────────────┘${NC}"
 echo  ""
+if [[ -f /etc/vpn-api/domain && -f /root/.vpn-api-key-install ]]; then
+  api_domain=$(cat /etc/vpn-api/domain)
+  api_key=$(cat /root/.vpn-api-key-install)
+  echo "VPN API Base URL : https://${api_domain}"
+  echo "VPN API Key      : ${api_key}"
+  echo "Simpan API key sekarang dan masukkan hanya di backend/admin website."
+  unset api_key
+  rm -f /root/.vpn-api-key-install
+fi
 sleep 4
 echo -e "[ ${yell}WARNING${NC} ] System will reboot in 5 seconds..."
 sleep 5
