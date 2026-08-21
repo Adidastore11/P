@@ -822,9 +822,7 @@ SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 */10 * * * * root truncate -s 0 /var/log/syslog \
     && truncate -s 0 /var/log/nginx/error.log \
-    && truncate -s 0 /var/log/nginx/access.log \
-    && truncate -s 0 /var/log/xray/error.log \
-    && truncate -s 0 /var/log/xray/access.log
+    && truncate -s 0 /var/log/nginx/access.log
 END
 
 cat >/etc/cron.d/daily_reboot <<-END
@@ -906,6 +904,22 @@ touch /var/log/xray/access.log
 touch /var/log/xray/error.log
 touch /var/log/xray/access2.log
 touch /var/log/xray/error2.log
+
+# Jangan hapus access log Xray setiap 10 menit: menu cek login memakai log ini
+# untuk menampilkan IP aktif terbaru. copytruncate tidak perlu restart Xray.
+apt-get install -y logrotate >/dev/null 2>&1
+cat >/etc/logrotate.d/xray <<'EOF'
+/var/log/xray/access.log /var/log/xray/error.log /var/log/xray/access2.log /var/log/xray/error2.log {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    create 640 www-data www-data
+}
+EOF
 # / / Ambil Xray Core Version Terbaru
 latest_version="$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
 bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u www-data --version 1.8.1
