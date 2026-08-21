@@ -335,10 +335,22 @@ SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 */10 * * * * root truncate -s 0 /var/log/syslog \
     && truncate -s 0 /var/log/nginx/error.log \
-    && truncate -s 0 /var/log/nginx/access.log \
-    && truncate -s 0 /var/log/xray/error.log \
-    && truncate -s 0 /var/log/xray/access.log
+    && truncate -s 0 /var/log/nginx/access.log
 END
+
+apt-get install -y logrotate >/dev/null 2>&1
+cat >/etc/logrotate.d/xray <<'EOF'
+/var/log/xray/access.log /var/log/xray/error.log /var/log/xray/access2.log /var/log/xray/error2.log {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    create 640 www-data www-data
+}
+EOF
 
 cat >/etc/cron.d/daily_reboot <<-END
 SHELL=/bin/sh
