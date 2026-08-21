@@ -913,6 +913,7 @@ bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release
     # > Create Service
     rm -rf /etc/systemd/system/xray.service.d
     cat >/etc/systemd/system/xray.service <<EOF
+[Unit]
 Description=Xray Service
 Documentation=https://github.com
 After=network.target nss-lookup.target
@@ -1230,6 +1231,7 @@ END
 #rm -rf /etc/systemd/system/xray.service.d
 rm -rf /etc/systemd/system/xray@.service
 cat <<EOF> /etc/systemd/system/xray.service
+[Unit]
 Description=Xray Service
 Documentation=https://github.com/xtls
 After=network.target nss-lookup.target
@@ -1264,65 +1266,10 @@ Restart=on-abort
 [Install]
 WantedBy=multi-user.target
 EOF
-wget https://raw.githubusercontent.com/Adidastore11/vip/main/limit/limit.sh && chmod +x limit.sh && ./limit.sh
-clear
-wget -q -O /usr/bin/limit-ip "https://raw.githubusercontent.com/Adidastore11/P/main/limit/limit-ip"
-chmod +x /usr/bin/*
-cd /usr/bin
-sed -i 's/\r//' limit-ip
-cd
-clear
-#SERVICE LIMIT ALL IP
-cat >/etc/systemd/system/vmip.service << EOF
-[Unit]
-Description=My
-ProjectAfter=network.target
-
-[Service]
-WorkingDirectory=/root
-ExecStart=/usr/bin/limit-ip vmip
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload
-systemctl restart vmip
-systemctl enable vmip
-
-cat >/etc/systemd/system/vlip.service << EOF
-[Unit]
-Description=My
-ProjectAfter=network.target
-
-[Service]
-WorkingDirectory=/root
-ExecStart=/usr/bin/limit-ip vlip
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload
-systemctl restart vlip
-systemctl enable vlip
-
-cat >/etc/systemd/system/trip.service << EOF
-[Unit]
-Description=My
-ProjectAfter=network.target
-
-[Service]
-WorkingDirectory=/root
-ExecStart=/usr/bin/limit-ip trip
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload
-systemctl restart trip
-systemctl enable trip
+# Limit IP tetap dicatat agar menu cek login/manual kick dapat dipakai.
+# Tidak ada daemon auto-kick atau auto-delete karena IP ponsel dapat berubah.
+mkdir -p /etc/klmpk/limit/{ssh,vmess,vless,trojan}/ip
+systemctl disable --now vmip vlip trip >/dev/null 2>&1 || true
 
 wget -q -O /usr/local/share/xray/geosite.dat "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" >/dev/null 2>&1
 wget -q -O /usr/local/share/xray/geoip.dat "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" >/dev/null 2>&1
@@ -1676,43 +1623,15 @@ setup_install
 
 }
 
-# Tentukan nilai baru yang diinginkan untuk fs.file-max
-NEW_FILE_MAX=65535  # Ubah sesuai kebutuhan Anda
-
-# Nilai tambahan untuk konfigurasi netfilter
-NF_CONNTRACK_MAX="net.netfilter.nf_conntrack_max=262144"
-NF_CONNTRACK_TIMEOUT="net.netfilter.nf_conntrack_tcp_timeout_time_wait=30"
-
-# File yang akan diedit
-SYSCTL_CONF="/etc/sysctl.conf"
-
-# Ambil nilai fs.file-max saat ini
-CURRENT_FILE_MAX=$(grep "^fs.file-max" "$SYSCTL_CONF" | awk '{print $3}' 2>/dev/null)
-
-# Cek apakah nilai fs.file-max sudah sesuai
-if [ "$CURRENT_FILE_MAX" != "$NEW_FILE_MAX" ]; then
-    # Cek apakah fs.file-max sudah ada di file
-    if grep -q "^fs.file-max" "$SYSCTL_CONF"; then
-        # Jika ada, ubah nilainya
-        sed -i "s/^fs.file-max.*/fs.file-max = $NEW_FILE_MAX/" "$SYSCTL_CONF" >/dev/null 2>&1
-    else
-        # Jika tidak ada, tambahkan baris baru
-        echo "fs.file-max = $NEW_FILE_MAX" >> "$SYSCTL_CONF" 2>/dev/null
-    fi
-fi
-
-# Cek apakah net.netfilter.nf_conntrack_max sudah ada
-if ! grep -q "^net.netfilter.nf_conntrack_max" "$SYSCTL_CONF"; then
-    echo "$NF_CONNTRACK_MAX" >> "$SYSCTL_CONF" 2>/dev/null
-fi
-
-# Cek apakah net.netfilter.nf_conntrack_tcp_timeout_time_wait sudah ada
-if ! grep -q "^net.netfilter.nf_conntrack_tcp_timeout_time_wait" "$SYSCTL_CONF"; then
-    echo "$NF_CONNTRACK_TIMEOUT" >> "$SYSCTL_CONF" 2>/dev/null
-fi
-
-# Terapkan perubahan
-sysctl -p >/dev/null 2>&1
+# Kapasitas koneksi VPN. File terpisah ini tidak menimpa tuning sistem lain.
+cat >/etc/sysctl.d/99-vpn-conntrack.conf <<'EOF'
+fs.file-max = 262144
+net.netfilter.nf_conntrack_max = 262144
+net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30
+net.netfilter.nf_conntrack_tcp_timeout_close_wait = 30
+net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 30
+EOF
+sysctl -p /etc/sysctl.d/99-vpn-conntrack.conf >/dev/null
 
 pasang_domain
 Dependencies
