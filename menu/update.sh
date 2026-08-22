@@ -7,8 +7,8 @@ apt install -y unzip wget
 # Mengunduh dan mengekstrak menu.zip
 wget -q https://raw.githubusercontent.com/Adidastore11/P/main/menu/menu.zip -O menu.zip
 unzip menu.zip
-if [[ ! -f menu/addhost || ! -f menu/fixcert || ! -f menu/api-domain ]]; then
-  echo "menu.zip tidak lengkap: addhost, fixcert, atau api-domain tidak ditemukan."
+if [[ ! -f menu/menu || ! -f menu/addhost || ! -f menu/fixcert || ! -f menu/api-domain ]]; then
+  echo "menu.zip tidak lengkap: menu utama, addhost, fixcert, atau api-domain tidak ditemukan."
   exit 1
 fi
 chmod +x menu/*
