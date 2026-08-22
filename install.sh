@@ -962,17 +962,19 @@ chmod +x /root/.acme.sh/acme.sh
 /root/.acme.sh/acme.sh --issue -d "$domain" -d "$api_domain" --standalone -k ec-256
 ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
 
-# nginx renew ssl
-echo -n '#!/bin/bash
-/etc/init.d/nginx stop
-"/root/.acme.sh"/acme.sh --cron --home "/root/.acme.sh" &> /root/renew_ssl.log
-cat /etc/xray/xray.key /etc/xray/xray.crt > /etc/haproxy/hap.pem
-systemctl reload haproxy
-/etc/init.d/nginx start
-/etc/init.d/nginx status
-' > /usr/local/bin/ssl_renew.sh
-chmod +x /usr/local/bin/ssl_renew.sh
-if ! grep -q 'ssl_renew.sh' /var/spool/cron/crontabs/root;then (crontab -l;echo "15 03 */3 * * /usr/local/bin/ssl_renew.sh") | crontab;fi
+# Sertifikat diperiksa setiap 3 hari. api-domain hanya menerbitkan ulang jika
+# kurang dari 30 hari atau SAN domain tunnel/API tidak lengkap.
+cat >/usr/local/bin/ssl_renew.sh <<'EOF'
+#!/usr/bin/env bash
+exec /usr/local/sbin/api-domain --renew-cert >>/var/log/vpn-api-ssl-renew.log 2>&1
+EOF
+chmod 700 /usr/local/bin/ssl_renew.sh
+{
+  crontab -l 2>/dev/null \
+    | grep -vF '/usr/local/bin/ssl_renew.sh' \
+    | grep -vE 'root/\.acme\.sh.*acme\.sh.*--cron' || true
+  echo "15 03 */3 * * /usr/local/bin/ssl_renew.sh"
+} | crontab -
 
 mkdir -p /var/www/html
 cd
