@@ -58,6 +58,29 @@ domain_points_here() {
     getent ahostsv4 "$domain" 2>/dev/null | awk '{print $1}' | sort -u | grep -Fxq "$ip"
 }
 
+wait_for_local_api() {
+    local attempt
+    for ((attempt = 1; attempt <= 15; attempt++)); do
+        if curl -fsS --max-time 3 -H "x-api-key: ${api_key}" http://127.0.0.1:3000/health | grep -q '"ok":true'; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+wait_for_https_api() {
+    local attempt
+    for ((attempt = 1; attempt <= 15; attempt++)); do
+        if curl -fsS --max-time 5 --resolve "${API_DOMAIN}:443:127.0.0.1" \
+            -H "x-api-key: ${api_key}" "https://${API_DOMAIN}/health" | grep -q '"ok":true'; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
 API_DOMAIN="${1:-}"
 if [[ -z "$API_DOMAIN" ]]; then
     read -rp 'Input API domain baru (contoh api.server-singapura.gachorr.web.id): ' API_DOMAIN
@@ -177,13 +200,11 @@ systemctl daemon-reload
 systemctl enable vpn-api >/dev/null
 systemctl start vpn-api
 systemctl is-active --quiet vpn-api || fail 'vpn-api gagal aktif.'
-curl -fsS --max-time 10 -H "x-api-key: ${api_key}" http://127.0.0.1:3000/health | grep -q '"ok":true'
+wait_for_local_api || fail 'vpn-api aktif tetapi belum siap menerima koneksi lokal.'
 
 info 'Memasang sertifikat HTTPS untuk tunnel dan API...'
 /usr/local/sbin/api-domain --renew-cert --force
-
-curl -fsS --max-time 15 --resolve "${API_DOMAIN}:443:127.0.0.1" \
-    -H "x-api-key: ${api_key}" "https://${API_DOMAIN}/health" | grep -q '"ok":true'
+wait_for_https_api || fail 'API HTTPS belum dapat diakses setelah sertifikat dipasang.'
 
 pm2 delete botvpn >/dev/null
 pm2 save >/dev/null
