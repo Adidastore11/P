@@ -34,7 +34,17 @@ done
 [[ -f "$HAPROXY_CFG" ]] || fail "HAProxy config tidak ditemukan: $HAPROXY_CFG"
 systemctl is-active --quiet haproxy || fail 'HAProxy tidak aktif.'
 systemctl is-active --quiet nginx || fail 'Nginx tidak aktif.'
-pm2 describe botvpn >/dev/null 2>&1 || fail 'PM2 process bernama botvpn tidak ditemukan.'
+
+# Nama proses API lama tidak seragam pada instalasi terdahulu.
+# Dukungan dua nama ini menjaga migrasi tidak menyentuh proses PM2 lain.
+LEGACY_PM2_NAME=''
+for candidate in botvpn apivpn; do
+    if pm2 describe "$candidate" >/dev/null 2>&1; then
+        LEGACY_PM2_NAME="$candidate"
+        break
+    fi
+done
+[[ -n "$LEGACY_PM2_NAME" ]] || fail 'PM2 API lama tidak ditemukan (nama yang didukung: botvpn atau apivpn).'
 
 for path in /opt/vpn-api /usr/local/lib/vpn-api /etc/vpn-api /etc/systemd/system/vpn-api.service /etc/sudoers.d/vpn-api /usr/local/sbin/api-domain; do
     [[ ! -e "$path" ]] || fail "Komponen VPN API baru sudah ada: $path. Batal agar tidak menimpa."
@@ -142,7 +152,7 @@ rollback() {
     systemctl restart nginx >/dev/null 2>&1 || true
     systemctl restart haproxy >/dev/null 2>&1 || true
     if [[ "$PM2_STOPPED" == true ]]; then
-        pm2 restart botvpn >/dev/null 2>&1 || true
+        pm2 restart "$LEGACY_PM2_NAME" >/dev/null 2>&1 || true
     fi
     echo -e "${RED}Rollback selesai. API PM2 lama dipulihkan.${NC}"
     exit "$rc"
@@ -193,8 +203,8 @@ backend vpn_api_backend
 EOF
 haproxy -c -f "$HAPROXY_CFG" >/dev/null
 
-info 'Memindahkan API dari PM2 ke systemd...'
-pm2 stop botvpn >/dev/null
+info "Memindahkan API PM2 (${LEGACY_PM2_NAME}) ke systemd..."
+pm2 stop "$LEGACY_PM2_NAME" >/dev/null
 PM2_STOPPED=true
 systemctl daemon-reload
 systemctl enable vpn-api >/dev/null
@@ -206,7 +216,7 @@ info 'Memasang sertifikat HTTPS untuk tunnel dan API...'
 /usr/local/sbin/api-domain --renew-cert --force
 wait_for_https_api || fail 'API HTTPS belum dapat diakses setelah sertifikat dipasang.'
 
-pm2 delete botvpn >/dev/null
+pm2 delete "$LEGACY_PM2_NAME" >/dev/null
 pm2 save >/dev/null
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
     ufw deny 3000/tcp >/dev/null || true
