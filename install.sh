@@ -1642,12 +1642,20 @@ setup_install
 # Kapasitas koneksi VPN. File terpisah ini tidak menimpa tuning sistem lain.
 cat >/etc/sysctl.d/99-vpn-conntrack.conf <<'EOF'
 fs.file-max = 262144
-net.netfilter.nf_conntrack_max = 262144
+net.netfilter.nf_conntrack_max = 500000
 net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30
 net.netfilter.nf_conntrack_tcp_timeout_close_wait = 30
 net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 30
 EOF
-sysctl -p /etc/sysctl.d/99-vpn-conntrack.conf >/dev/null
+
+# Muat conntrack pada boot dan terapkan profile ini sekarang juga.
+printf 'nf_conntrack\n' >/etc/modules-load.d/vpn-conntrack.conf
+modprobe nf_conntrack 2>/dev/null || true
+if ! sysctl --load=/etc/sysctl.d/99-vpn-conntrack.conf >/dev/null \
+  || [ "$(sysctl -n net.netfilter.nf_conntrack_max 2>/dev/null)" != '500000' ]; then
+  echo '[ ERROR ] nf_conntrack_max gagal diterapkan.' >&2
+  exit 1
+fi
 
 pasang_domain
 Dependencies
