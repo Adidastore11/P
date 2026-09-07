@@ -90,25 +90,39 @@ if [[ -z "$domain" ]]; then
     exit 1
 fi
 
-# Gunakan endpoint resmi acme.sh dan jangan lanjut bila instalasi/upgrade gagal.
+# Unduh arsip acme.sh secara langsung dengan IPv4. Bootstrap get.acme.sh
+# menjalankan unduhan GitHub internal tanpa opsi -4, yang dapat timeout pada
+# VPS dengan rute IPv6/GitHub bermasalah.
 if [[ ! -x /root/.acme.sh/acme.sh ]]; then
-    acme_installer="/tmp/acme-install.sh"
+    acme_workdir="$(mktemp -d)" || {
+        echo "Tidak dapat membuat direktori sementara acme.sh."
+        exit 1
+    }
+    acme_archive="${acme_workdir}/acme.sh.tar.gz"
+    mkdir -p "${acme_workdir}/src"
     if ! curl -4 --fail --location --retry 5 --retry-delay 5 \
-      --connect-timeout 15 --max-time 300 https://get.acme.sh -o "$acme_installer"; then
+      --connect-timeout 15 --max-time 300 \
+      https://codeload.github.com/acmesh-official/acme.sh/tar.gz/refs/heads/master \
+      -o "$acme_archive"; then
         echo "Gagal mengunduh acme.sh. Periksa jaringan VPS lalu ulangi instalasi."
+        rm -rf "$acme_workdir"
         exit 1
     fi
-    if ! sh "$acme_installer" --home /root/.acme.sh --nocron; then
+    if ! tar -tzf "$acme_archive" >/dev/null \
+      || ! tar -xzf "$acme_archive" -C "${acme_workdir}/src" --strip-components=1; then
+        echo "Arsip acme.sh tidak valid. Instalasi dihentikan."
+        rm -rf "$acme_workdir"
+        exit 1
+    fi
+    if ! (cd "${acme_workdir}/src" && ./acme.sh --install --home /root/.acme.sh --no-cron --no-profile); then
         echo "Instalasi acme.sh gagal. Instalasi dihentikan."
+        rm -rf "$acme_workdir"
         exit 1
     fi
+    rm -rf "$acme_workdir"
 fi
 if [[ ! -x /root/.acme.sh/acme.sh ]]; then
     echo "Binary acme.sh tidak ditemukan. Instalasi dihentikan."
-    exit 1
-fi
-if ! /root/.acme.sh/acme.sh --upgrade --auto-upgrade; then
-    echo "Upgrade acme.sh gagal. Instalasi dihentikan agar sertifikat tidak invalid."
     exit 1
 fi
 if ! /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt; then
