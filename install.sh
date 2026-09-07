@@ -560,7 +560,7 @@ apt install openssl iptables iptables-persistent -y
 mkdir -p /etc/openvpn/server/easy-rsa/
 cd /etc/openvpn/
 wget ${repo}ssh/vpn.zip
-unzip vpn.zip
+unzip -o vpn.zip
 rm -f vpn.zip
 chown -R root:root /etc/openvpn/server/easy-rsa/
 
@@ -703,12 +703,9 @@ chronyc tracking -v
 apt -y install fail2ban
 
 # Instal DDOS Flate
-if [ -d '/usr/local/ddos' ]; then
-	echo; echo; echo "Please un-install the previous version first"
-	exit 0
-else
-	mkdir /usr/local/ddos
-fi
+# Folder dapat sudah ada bila instalasi sebelumnya terputus. Lanjutkan dengan
+# file terbaru agar installer aman dijalankan ulang.
+install -d -m 755 /usr/local/ddos
 clear
 echo; echo 'Installing DOS-Deflate 0.6'; echo
 echo; echo -n 'Downloading source files...'
@@ -730,7 +727,7 @@ download_file "http://www.inetbase.com/scripts/ddos/ddos.sh" "/usr/local/ddos/dd
 
 if [ -f /usr/local/ddos/ddos.sh ]; then
     chmod 0755 /usr/local/ddos/ddos.sh
-    cp -s /usr/local/ddos/ddos.sh /usr/local/bin/ddos
+    ln -sfn /usr/local/ddos/ddos.sh /usr/local/bin/ddos
     echo '...done'
 
     echo; echo -n 'Creating cron to run script every minute.....(Default setting)'
