@@ -51,30 +51,92 @@ apt install curl pwgen openssl cron -y
 sleep 0.5
 echo -e "[ ${green}INFO$NC ] Downloading & Installing xray core"
 domainSock_dir="/run/xray";! [ -d $domainSock_dir ] && mkdir  $domainSock_dir
-chown www-data.www-data $domainSock_dir
+chown www-data:www-data $domainSock_dir
 # Make Folder XRay
 mkdir -p /var/log/xray
 mkdir -p /etc/xray
-chown www-data.www-data /var/log/xray
+chown www-data:www-data /var/log/xray
 chmod +x /var/log/xray
 touch /var/log/xray/access.log
 touch /var/log/xray/error.log
 touch /var/log/xray/access2.log
 touch /var/log/xray/error2.log
-# / / Ambil Xray Core Version Terbaru
-#latest_version="$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
-bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u www-data --version 24.10.31
+# Download installer terlebih dahulu agar kegagalan unduh tidak diteruskan sebagai
+# instalasi Xray kosong. Installer resmi juga memverifikasi checksum arsip Xray.
+xray_installer="/tmp/xray-install-release.sh"
+if ! curl -4 --fail --location --retry 5 --retry-delay 5 \
+  --connect-timeout 15 --max-time 300 \
+  "https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh" \
+  -o "$xray_installer"; then
+    echo "Gagal mengunduh installer Xray. Periksa jaringan VPS lalu ulangi instalasi."
+    exit 1
+fi
+if ! head -n 1 "$xray_installer" | grep -q '^#!'; then
+    echo "Installer Xray yang diunduh tidak valid. Instalasi dihentikan."
+    exit 1
+fi
+if ! bash "$xray_installer" install --no-update-service -u www-data; then
+    echo "Instalasi Xray gagal. Konfigurasi panel tidak diubah."
+    exit 1
+fi
+if [[ ! -x /usr/local/bin/xray ]]; then
+    echo "Binary /usr/local/bin/xray tidak ditemukan setelah instalasi. Instalasi dihentikan."
+    exit 1
+fi
 
 ## crt xray
-systemctl stop nginx
-systemctl stop haproxy
-mkdir /root/.acme.sh
-curl https://acme-install.netlify.app/acme.sh -o /root/.acme.sh/acme.sh
-chmod +x /root/.acme.sh/acme.sh
-/root/.acme.sh/acme.sh --upgrade --auto-upgrade
-/root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-/root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
-~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
+if [[ -z "$domain" ]]; then
+    echo "Domain kosong. Sertifikat tidak dapat dibuat."
+    exit 1
+fi
+
+# Gunakan endpoint resmi acme.sh dan jangan lanjut bila instalasi/upgrade gagal.
+if [[ ! -x /root/.acme.sh/acme.sh ]]; then
+    acme_installer="/tmp/acme-install.sh"
+    if ! curl -4 --fail --location --retry 5 --retry-delay 5 \
+      --connect-timeout 15 --max-time 300 https://get.acme.sh -o "$acme_installer"; then
+        echo "Gagal mengunduh acme.sh. Periksa jaringan VPS lalu ulangi instalasi."
+        exit 1
+    fi
+    if ! sh "$acme_installer" --home /root/.acme.sh --nocron; then
+        echo "Instalasi acme.sh gagal. Instalasi dihentikan."
+        exit 1
+    fi
+fi
+if [[ ! -x /root/.acme.sh/acme.sh ]]; then
+    echo "Binary acme.sh tidak ditemukan. Instalasi dihentikan."
+    exit 1
+fi
+if ! /root/.acme.sh/acme.sh --upgrade --auto-upgrade; then
+    echo "Upgrade acme.sh gagal. Instalasi dihentikan agar sertifikat tidak invalid."
+    exit 1
+fi
+if ! /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt; then
+    echo "Gagal memilih CA Let's Encrypt. Instalasi dihentikan."
+    exit 1
+fi
+
+# Standalone ACME membutuhkan port 80; hentikan dua service yang dapat memakainya.
+systemctl stop nginx >/dev/null 2>&1 || true
+systemctl stop haproxy >/dev/null 2>&1 || true
+if ! /root/.acme.sh/acme.sh --issue -d "$domain" --standalone -k ec-256; then
+    echo "Penerbitan sertifikat gagal. Periksa DNS domain dan port 80 VPS."
+    systemctl start nginx >/dev/null 2>&1 || true
+    systemctl start haproxy >/dev/null 2>&1 || true
+    exit 1
+fi
+if ! /root/.acme.sh/acme.sh --installcert -d "$domain" --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc; then
+    echo "Pemasangan sertifikat Xray gagal. Instalasi dihentikan."
+    systemctl start nginx >/dev/null 2>&1 || true
+    systemctl start haproxy >/dev/null 2>&1 || true
+    exit 1
+fi
+if [[ ! -s /etc/xray/xray.crt || ! -s /etc/xray/xray.key ]] || ! openssl x509 -in /etc/xray/xray.crt -noout; then
+    echo "File sertifikat Xray tidak valid. Instalasi dihentikan."
+    systemctl start nginx >/dev/null 2>&1 || true
+    systemctl start haproxy >/dev/null 2>&1 || true
+    exit 1
+fi
 
 # nginx renew ssl
 echo -n '#!/bin/bash
@@ -385,9 +447,10 @@ EOF
 #nginx config
 wget -O /etc/nginx/conf.d/xray.conf "${REPO}xray/xray.conf"
 wget -O /etc/haproxy/haproxy.cfg "${REPO}xray/haproxy.cfg"
-sed -i 's/xxx/$domain/' /etc/nginx/conf.d/xray.conf
-sed -i 's/xxx/$domain/' /etc/haproxy/haproxy.cfg
-cat /etc/xray/xray.key /etc/xray/xray.crt | tee /etc/haproxy/hap.pem
+sed -i "s/xxx/${domain}/g" /etc/nginx/conf.d/xray.conf
+sed -i "s/xxx/${domain}/g" /etc/haproxy/haproxy.cfg
+cat /etc/xray/xray.key /etc/xray/xray.crt > /etc/haproxy/hap.pem
+chmod 600 /etc/haproxy/hap.pem
 wget -q -O /usr/local/share/xray/geosite.dat "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" >/dev/null 2>&1
 wget -q -O /usr/local/share/xray/geoip.dat "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" >/dev/null 2>&1
 echo -e "$yell[SERVICE]$NC Restart All service"
@@ -395,11 +458,35 @@ systemctl daemon-reload
 sleep 0.5
 echo -e "[ ${green}ok${NC} ] Enable & restart xray "
 systemctl daemon-reload
+if ! /usr/local/bin/xray run -test -config /etc/xray/config.json; then
+  echo "Konfigurasi Xray tidak valid; layanan VPN tidak direstart."
+  exit 1
+fi
+if ! nginx -t; then
+  echo "Konfigurasi Nginx tidak valid; layanan VPN tidak direstart."
+  exit 1
+fi
+if ! haproxy -c -f /etc/haproxy/haproxy.cfg; then
+  echo "Konfigurasi HAProxy tidak valid; layanan VPN tidak direstart."
+  exit 1
+fi
 systemctl enable xray
 systemctl restart xray
+if ! systemctl is-active --quiet xray; then
+  echo "Xray gagal aktif setelah restart. Periksa: journalctl -u xray -n 50 --no-pager"
+  exit 1
+fi
 systemctl restart nginx
+if ! systemctl is-active --quiet nginx; then
+  echo "Nginx gagal aktif setelah restart."
+  exit 1
+fi
 systemctl enable haproxy
 systemctl restart haproxy
+if ! systemctl is-active --quiet haproxy; then
+  echo "HAProxy gagal aktif setelah restart."
+  exit 1
+fi
 systemctl enable runn
 systemctl restart runn
 
