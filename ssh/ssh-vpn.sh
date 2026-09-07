@@ -209,7 +209,7 @@ clear
 apt-get install ruby -y
 # install lolcat
 wget https://github.com/busyloop/lolcat/archive/master.zip
-unzip master.zip
+unzip -o master.zip
 rm -f master.zip
 cd lolcat-master/bin
 gem install lolcat
@@ -238,12 +238,9 @@ sed -i '$ i\/swapfile      swap swap   defaults    0 0' /etc/fstab
 apt -y install fail2ban
 
 # Instal DDOS Flate
-if [ -d '/usr/local/ddos' ]; then
-	echo; echo; echo "Please un-install the previous version first"
-	exit 0
-else
-	mkdir /usr/local/ddos
-fi
+# Folder dapat sudah ada bila instalasi sebelumnya terputus. Lanjutkan dengan
+# file terbaru agar installer aman dijalankan ulang.
+install -d -m 755 /usr/local/ddos
 clear
 echo; echo 'Installing DOS-Deflate 0.6'; echo
 echo; echo -n 'Downloading source files...'
@@ -255,7 +252,7 @@ wget -q -O /usr/local/ddos/ignore.ip.list http://www.inetbase.com/scripts/ddos/i
 echo -n '.'
 wget -q -O /usr/local/ddos/ddos.sh http://www.inetbase.com/scripts/ddos/ddos.sh
 chmod 0755 /usr/local/ddos/ddos.sh
-cp -s /usr/local/ddos/ddos.sh /usr/local/bin/ddos
+ln -sfn /usr/local/ddos/ddos.sh /usr/local/bin/ddos
 echo '...done'
 echo; echo -n 'Creating cron to run script every minute.....(Default setting)'
 /usr/local/ddos/ddos.sh --cron > /dev/null 2>&1
